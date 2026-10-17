@@ -1,112 +1,152 @@
-# Sentiment BBM — Analisis Sentimen Media Sosial Terkait BBM
+# ⛽ bbm-sentiment-api
 
-Aplikasi Python siap pakai (*production-ready*) untuk melakukan analisis sentimen terhadap komentar media sosial berbahasa Indonesia mengenai kebijakan Bahan Bakar Minyak (BBM). Project ini menyediakan **dua pendekatan (versi)** analisis sentimen yang dapat digunakan sesuai kebutuhan.
+**Layanan analisis sentimen komentar media sosial Bahasa Indonesia tentang BBM (harga bahan bakar minyak).**
+Kirim sebuah kalimat → dapat label **positif / negatif / netral**. Bisa dipakai lewat **terminal (CLI)** atau **REST API (FastAPI)**.
 
----
-
-## 🌟 Dua Pendekatan Analisis Sentimen
-
-Project ini memiliki 2 versi implementasi analisis sentimen:
-
-### 1. Versi Leksikon (Kamus Kata) — Versi 1
-* **Metode:** Pencocokan berbasis kamus kata positif dan negatif secara manual (*lexicon-based*).
-* **Kelebihan:** Sangat ringan, cepat, tanpa beban memori tinggi, dan tidak memerlukan GPU/model pembelajaran mesin.
-* **Fitur:** Dilengkapi Command Line Interface (CLI) dan server API sederhana.
-
-### 2. Versi Semantik AI (Embedding Vektor) — Versi 2
-* **Metode:** Menggunakan model representasi bahasa *Sentence Transformers* (`paraphrase-multilingual-MiniLM-L12-v2`) untuk menghitung kesamaan kosinus (*cosine similarity*) antara teks input dan kalimat jangkar (*anchor sentences*).
-* **Kelebihan:** Lebih cerdas mendeteksi konteks kalimat secara semantik tanpa bergantung pada pencocokan kata demi kata (*zero-shot learning*).
+> 🔀 Mencari klasifikasi **topik** postingan trending (bukan sentimen BBM)? Lihat project saudaranya: [**trending-topic-mapper**](https://github.com/ridokaa/trending-topic-mapper).
 
 ---
 
-## 📁 Struktur Repositori
+## 🧭 Gambaran Singkat
 
 ```
-├── app/                        # [Versi 2] Analisis Sentimen Semantik AI
-│   ├── main.py                 # FastAPI Entry Point (lifespan-managed engine)
-│   ├── config.py               # Konfigurasi Pydantic settings dari .env
-│   ├── schemas/
-│   │   └── sentiment.py        # Model Pydantic Request/Response
-│   └── services/
-│       ├── verosight_client.py # Client HTTP Async untuk API Verosight
-│       └── sentiment_engine.py # Logika embedding & Cosine Similarity
-├── api/                        # [Versi 1] FastAPI Server untuk Leksikon
-│   └── server.py               # Endpoint API versi Leksikon
-├── data/                       # Penarikan data & Mock data
-│   ├── fetch_data.py           # Script penarik data dari API Verosight
-│   └── comments_cache.json     # Cache data komentar (diabaikan oleh git)
-├── model/                      # [Versi 1] Logika Sentimen Leksikon
-│   ├── analyzer.py             # Fungsi analisis batch & statistik
-│   └── lexicon.py              # Definisi kamus kata positif/negatif
-├── main.py                     # CLI Entry Point untuk Versi Leksikon
-├── .env.example                # Template konfigurasi environment
-├── .gitignore                  # File konfigurasi abaikan Git
-├── requirements.txt            # Daftar dependensi Python
-└── README.md                   # Dokumentasi project
+Komentar BBM  ──►  V1 Leksikon (kamus kata)      ──►  positif / negatif / netral + skor
+ (input / API      atau
+  Verosight)       V2 Semantik (SBERT embedding)  ──►  POSITIVE / NEGATIVE / NEUTRAL + confidence
 ```
+
+Ada **dua versi** mesin sentimen dalam satu repo. Keduanya berdiri sendiri, pilih sesuai kebutuhan:
+
+| | **V1 — Leksikon** | **V2 — Semantik (AI)** |
+|---|---|---|
+| **Cara kerja** | Menghitung kata positif/negatif dari kamus, memperhitungkan **negasi** (`tidak`, `gak`, …) dan **penguat** (`sangat`, `makin`, …) | Mengubah teks jadi vektor (SBERT `paraphrase-multilingual-MiniLM-L12-v2`), lalu dibandingkan dengan **kalimat jangkar** tiap label pakai *cosine similarity* |
+| **Kelebihan** | Sangat ringan, instan, hasilnya bisa dijelaskan (kata apa yang memicu) | Paham konteks kalimat walau kata kuncinya tidak ada di kamus (*zero-shot*) |
+| **Kekurangan** | Hanya tahu kata yang ada di kamus | Perlu download model ~460 MB, lebih lambat |
+| **Akses** | CLI + API (port 8001) | API (port 8003) |
+| **Kode** | `main.py`, `api/`, `model/`, `data/` | `app/` |
 
 ---
 
-## 🚀 Panduan Setup & Instalasi
+## 🚀 Quick Start
 
-### 1. Persiapan Virtual Environment
-Buat dan aktifkan virtual environment Python:
 ```bash
+git clone https://github.com/ridokaa/bbm-sentiment-api.git
+cd bbm-sentiment-api
+
 python3 -m venv venv
 source venv/bin/activate
-```
-
-### 2. Instal Dependensi
-Pasang semua pustaka yang diperlukan:
-```bash
-# Untuk Python 3.14+ di macOS, jalankan dengan flag kompabilitas PyO3 jika diperlukan:
+# Python 3.14+ di macOS butuh flag PyO3 di bawah; di versi lain boleh dihapus
 PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 pip install -r requirements.txt
+
+cp .env.example .env      # lalu isi VEROSIGHT_API_KEY
 ```
 
-### 3. Konfigurasi Environment Variable
-Salin template `.env.example` menjadi `.env` lalu sesuaikan isinya:
+> Tanpa API key, **V1 tetap jalan** memakai 50 komentar contoh bawaan. **V2** butuh key untuk endpoint ambil-data, tapi endpoint analisis teks tetap jalan.
+
+---
+
+## 1️⃣ V1 — Leksikon
+
+### Lewat terminal
+
 ```bash
-cp .env.example .env
+# Analisis satu kalimat
+python3 main.py analyze "Kebijakan BBM sekarang sangat membantu rakyat kecil"
+
+# Ambil komentar (Verosight, fallback ke data contoh) lalu analisis semuanya
+python3 main.py comments --keyword BBM --limit 5 --verbose
 ```
-Isi variabel `VEROSIGHT_API_KEY` di dalam file `.env` dengan API Key Verosight Anda yang valid.
+
+Contoh output:
+
+```
+Teks    : BBM naik lagi, rakyat makin sengsara
+Sentimen: negatif
+Skor    : -1.0
+Kata negatif: naik, sengsara
+```
+
+### Lewat API
+
+```bash
+python3 main.py serve --port 8001      # dokumentasi interaktif: http://localhost:8001/docs
+```
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| `GET` | `/analyze?text=...` | Analisis satu teks |
+| `POST` | `/analyze` | Sama, body `{"text": "..."}` |
+| `POST` | `/batch` | Banyak teks sekaligus, body `{"comments": ["...", "..."]}` + ringkasan jumlah per label |
+| `GET` | `/comments?keyword=BBM&days=20&limit=50` | Lihat komentar mentah dari sumber data |
+| `GET` | `/comments/sentiment?keyword=BBM` | Ambil komentar + langsung dianalisis |
+
+```bash
+curl "http://localhost:8001/analyze?text=Terima%20kasih%20pemerintah%20BBM%20tidak%20jadi%20naik"
+```
 
 ---
 
-## 🛠️ Cara Menjalankan
+## 2️⃣ V2 — Semantik (SBERT)
 
-### Menjalankan Versi 1 (Leksikon)
+```bash
+uvicorn app.main:app --port 8003       # dokumentasi interaktif: http://localhost:8003/docs
+```
 
-* **Melalui CLI (Command Line):**
-  Untuk menganalisis satu kalimat teks langsung dari terminal:
-  ```bash
-  python3 main.py analyze "Kebijakan BBM sekarang sangat membantu rakyat kecil"
-  ```
-  Untuk menarik data komentar dari API Verosight dan menganalisisnya:
-  ```bash
-  python3 main.py comments --limit 5 --verbose
-  ```
+*Startup pertama mengunduh model embedding dari HuggingFace.*
 
-* **Melalui API Server (FastAPI):**
-  Jalankan server API versi leksikon pada port 8001:
-  ```bash
-  python3 main.py serve --port 8001
-  ```
-  Akses dokumentasi interaktif API di: **http://localhost:8001/docs**
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| `GET` | `/health` | Cek service hidup |
+| `POST` | `/api/v1/analyze` | Analisis satu teks, body `{"text": "..."}` |
+| `GET` | `/api/v1/fetch-and-analyze?keyword=BBM&days=30&limit=50` | Ambil komentar dari Verosight lalu dianalisis (default `keyword` di kode adalah `Asing`, jadi set `keyword=BBM` secara eksplisit) |
 
----
+```bash
+curl -X POST http://localhost:8003/api/v1/analyze \
+     -H "Content-Type: application/json" \
+     -d '{"text": "BBM naik terus, rakyat kecil jangan dibebani"}'
+```
 
-### Menjalankan Versi 2 (Semantik AI)
+```json
+{"text": "BBM naik terus, rakyat kecil jangan dibebani", "label": "NEGATIVE", "confidence": 0.3662,
+ "scores": {"POSITIVE": 0.2199, "NEGATIVE": 0.2506, "NEUTRAL": 0.2139}}
+```
 
-* **Melalui API Server (FastAPI):**
-  Jalankan server API berbasis semantik/AI pada port 8003:
-  ```bash
-  uvicorn app.main:app --port 8003
-  ```
-  *(Catatan: Pada startup pertama, sistem akan mengunduh model embedding HuggingFace sebesar ~350MB)*
-
-  Akses dokumentasi interaktif API di: **http://localhost:8003/docs**
+`scores` = kemiripan tertinggi teks ke kalimat jangkar tiap label; `confidence` = skor label terpilih dibagi total ketiga skor.
 
 ---
 
-## 🛡️ Keamanan Data (Penting!)
-Jangan pernah melakukan push/commit file `.env` atau hardcode API Key langsung ke GitHub. Selalu gunakan mekanisme environment variable seperti yang sudah dikonfigurasi pada file `.gitignore`.
+## ⚙️ Konfigurasi (`.env`)
+
+| Variabel | Default | Keterangan |
+|---|---|---|
+| `VEROSIGHT_API_KEY` | – | API key Verosight (wajib untuk data asli) |
+| `VEROSIGHT_BASE_URL` | `https://api.verosight.com` | Base URL API |
+| `EMBEDDING_MODEL_NAME` | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | Model embedding untuk V2 |
+
+---
+
+## 📁 Struktur
+
+```
+├── main.py                     # V1: CLI (analyze / comments / serve)
+├── api/server.py               # V1: FastAPI
+├── model/
+│   ├── lexicon.py              # V1: kamus kata positif/negatif, negasi, penguat
+│   └── analyzer.py             # V1: preprocessing teks + analisis batch + ringkasan
+├── data/fetch_data.py          # V1: ambil data Verosight, fallback 50 komentar contoh
+├── app/                        # V2
+│   ├── main.py                 #   FastAPI (model dimuat sekali saat startup)
+│   ├── config.py               #   baca .env (pydantic-settings)
+│   ├── schemas/sentiment.py    #   model request/response
+│   └── services/
+│       ├── sentiment_engine.py #   SBERT + kalimat jangkar + cosine similarity
+│       └── verosight_client.py #   client async Verosight
+├── .env.example
+└── requirements.txt
+```
+
+---
+
+## 🛡️ Keamanan
+
+`.env` sudah masuk `.gitignore`. Jangan pernah commit API key atau menuliskannya langsung di kode.
