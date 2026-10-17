@@ -42,7 +42,7 @@ def cmd_serve(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Sentiment Analysis BBM")
+    parser = argparse.ArgumentParser(description="Indonesian Sentiment API")
     parser.add_argument("--version", action="version", version="1.0.0")
     sub = parser.add_subparsers(dest="command", help="Perintah yang tersedia")
 

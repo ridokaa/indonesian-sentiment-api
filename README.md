@@ -1,16 +1,16 @@
-# ⛽ bbm-sentiment-api
+# 💬 indonesian-sentiment-api
 
-**Layanan analisis sentimen komentar media sosial Bahasa Indonesia tentang BBM (harga bahan bakar minyak).**
+**Layanan analisis sentimen komentar media sosial Bahasa Indonesia.**
 Kirim sebuah kalimat → dapat label **positif / negatif / netral**. Bisa dipakai lewat **terminal (CLI)** atau **REST API (FastAPI)**.
 
-> 🔀 Mencari klasifikasi **topik** postingan trending (bukan sentimen BBM)? Lihat project saudaranya: [**trending-topic-mapper**](https://github.com/ridokaa/trending-topic-mapper).
+> 🔀 Mencari klasifikasi **topik** postingan trending (bukan sentimen)? Lihat project saudaranya: [**trending-topic-mapper**](https://github.com/ridokaa/trending-topic-mapper).
 
 ---
 
 ## 🧭 Gambaran Singkat
 
 ```
-Komentar BBM  ──►  V1 Leksikon (kamus kata)      ──►  positif / negatif / netral + skor
+Komentar      ──►  V1 Leksikon (kamus kata)      ──►  positif / negatif / netral + skor
  (input / API      atau
   Verosight)       V2 Semantik (SBERT embedding)  ──►  POSITIVE / NEGATIVE / NEUTRAL + confidence
 ```
@@ -30,8 +30,8 @@ Ada **dua versi** mesin sentimen dalam satu repo. Keduanya berdiri sendiri, pili
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/ridokaa/bbm-sentiment-api.git
-cd bbm-sentiment-api
+git clone https://github.com/ridokaa/indonesian-sentiment-api.git
+cd indonesian-sentiment-api
 
 python3 -m venv venv
 source venv/bin/activate

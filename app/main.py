@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Sentiment BBM", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Indonesian Sentiment API", version="1.0.0", lifespan=lifespan)
 
 
 @app.get("/health")

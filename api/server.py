@@ -5,8 +5,8 @@ from data.fetch_data import load_comments
 from model.analyzer import analyze_sentiment, analyze_batch, summary_statistics
 
 app = FastAPI(
-    title="Sentiment Analysis BBM",
-    description="API analisis sentimen komentar media sosial tentang BBM (Indonesia)",
+    title="Indonesian Sentiment API",
+    description="API analisis sentimen komentar media sosial Bahasa Indonesia",
     version="1.0.0",
 )
 
@@ -36,7 +36,7 @@ class BatchResponse(BaseModel):
 @app.get("/")
 def root():
     return {
-        "service": "Sentiment Analysis BBM",
+        "service": "Indonesian Sentiment API",
         "docs": "/docs",
         "endpoints": {
             "GET /analyze?text=...": "Analisis sentimen teks tunggal",
